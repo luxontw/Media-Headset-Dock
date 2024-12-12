@@ -1,0 +1,105 @@
+#include <vector>
+#include <Arduino.h>
+#include <TFT_eSPI.h>
+#include <BluetoothA2DPSink.h>
+#include <font_12.h>
+#define light_sensor 36
+
+using std::vector;
+
+BluetoothA2DPSink a2dp_sink;
+TFT_eSPI tft = TFT_eSPI();
+
+String song_title = "";
+vector<String> song_info;
+bool is_need_song_info = true;
+bool is_play = false;
+int seconds = 2;
+uint32_t end = 0;
+
+// void read_data_stream(const uint8_t *data, uint32_t length) {
+//   if (end==0){
+//     end = millis()+seconds*1000;
+//   }
+//   if (millis()<end){
+//     // process all data
+//     int16_t *values = (int16_t*) data;
+//     for (int j=0; j<length/2; j+=2){
+//       // print the 2 channel values
+//       Serial.print(values[j]);
+//       Serial.print(",");
+//       Serial.println(values[j+1]);
+//     }
+//   }
+// }
+
+void avrc_metadata_callback(uint8_t id, const uint8_t *text)
+{
+  String text_str((char *)text);
+  Serial.println(id);
+  if (id == 1 && text_str == " ")
+  {
+    Serial.println("Song info is not available");
+    is_need_song_info = false;
+  }
+  if (id == 1 && text_str != " ")
+  {
+    Serial.println("Song info is available");
+    is_need_song_info = true;
+  }
+  if (is_need_song_info)
+    song_info.push_back(text_str);
+}
+
+void connection_state_changed(esp_a2d_connection_state_t state, void *ptr)
+{
+  Serial.println(a2dp_sink.to_str(state));
+}
+
+void audio_state_changed(esp_a2d_audio_state_t state, void *ptr)
+{
+  Serial.println(a2dp_sink.to_str(state));
+}
+
+void setup()
+{
+  // a2dp_sink.set_stream_reader(read_data_stream, false);
+  a2dp_sink.set_on_connection_state_changed(connection_state_changed);
+  a2dp_sink.set_on_audio_state_changed(audio_state_changed);
+  a2dp_sink.set_avrc_metadata_callback(avrc_metadata_callback);
+  a2dp_sink.start("MyMusic");
+  tft.begin();
+  tft.setRotation(1);
+  tft.fillScreen(TFT_BLACK);
+  Serial.begin(115200);
+  pinMode(light_sensor, INPUT);
+}
+
+void loop()
+{
+  Serial.println("-------------------------------- Start --------------------------------");
+  tft.fillScreen(TFT_BLACK);
+  int lightValue = analogRead(light_sensor);
+  if (song_info.size() >= 6 && (song_info.size() % 6 == 0))
+  {
+    song_title = song_info[song_info.size() - 6];
+  }
+  if (song_title != "")
+  {
+    tft.loadFont(font_12);
+    tft.drawString(song_title, 0, 0);
+    tft.unloadFont();
+  }
+  delay(1000);
+  if (lightValue >= 100 && !is_play)
+  {
+    a2dp_sink.play();
+    is_play = true;
+  }
+  if (lightValue < 100 && is_play)
+  {
+    a2dp_sink.pause();
+    is_play = false;
+  }
+  Serial.println("-------------------------------- End --------------------------------");
+}
