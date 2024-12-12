@@ -6,5 +6,5 @@
 - 歌曲資訊顯示
 - 藍芽無線通訊
 ## 系統展示
-![image](https://github.com/user-attachments/assets/721af35c-10ff-415f-90c0-89f90a99106e)
 - Demo影片 https://www.youtube.com/watch?v=948JjalaIyY
+![image](https://github.com/user-attachments/assets/721af35c-10ff-415f-90c0-89f90a99106e)
